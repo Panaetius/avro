@@ -73,7 +73,8 @@ impl Checker {
                 || r_type == SchemaKind::TimestampNanos
                 || r_type == SchemaKind::LocalTimestampMillis
                 || r_type == SchemaKind::LocalTimestampMicros
-                || r_type == SchemaKind::LocalTimestampNanos)
+                || r_type == SchemaKind::LocalTimestampNanos
+                || r_type == SchemaKind::Ref)
         {
             return Ok(());
         }
@@ -488,6 +489,30 @@ impl SchemaCompatibility {
                         schema_type: String::from("writers_schema"),
                         expected_type: vec![r_type, SchemaKind::Fixed],
                     });
+                }
+                SchemaKind::Ref => {
+                    if let Schema::Ref { name: w_name } = writers_schema {
+                        if let Schema::Ref { name: r_name } = readers_schema {
+                            if r_name == w_name {
+                                return Ok(());
+                            } else {
+                                return Err(CompatibilityError::NameMismatch {
+                                    writer_name: w_name.name.clone(),
+                                    reader_name: r_name.name.clone(),
+                                });
+                            }
+                        } else {
+                            return Err(CompatibilityError::TypeExpected {
+                                schema_type: String::from("readers_schema1"),
+                                expected_type: vec![SchemaKind::Ref],
+                            });
+                        }
+                    } else {
+                        return Err(CompatibilityError::TypeExpected {
+                            schema_type: String::from("writers_schema1"),
+                            expected_type: vec![SchemaKind::Ref],
+                        });
+                    }
                 }
                 _ => {
                     return Err(CompatibilityError::Inconclusive(String::from(
